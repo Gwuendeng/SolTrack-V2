@@ -4,11 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Solar Tracker Dashboard | PLTS Monitor</title>
-  <meta name="description" content="Dashboard monitoring Solar Tracker 2 Axis berbasis ESP32" />
+  <meta name="description" content="Dashboard monitoring Solar Tracker 2 Axis berbasis ESP32 dengan Blynk IoT" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <!-- MQTT.js — untuk koneksi remote via HiveMQ Cloud -->
-  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
   <style>
     :root {
       --bg:      #090e1a;
@@ -18,25 +16,30 @@
       --accent2: #10b981;
       --accent3: #3b82f6;
       --danger:  #ef4444;
-      --purple:  #8b5cf6;
       --text:    #e2e8f0;
       --muted:   #64748b;
       --glow:    0 0 30px rgba(245,158,11,0.15);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       font-family: 'Inter', sans-serif;
-      background: var(--bg); color: var(--text);
-      min-height: 100vh; overflow-x: hidden;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
     }
+
     body::before {
-      content: ''; position: fixed; top: -20%; left: -10%;
+      content: '';
+      position: fixed; top: -20%; left: -10%;
       width: 600px; height: 600px;
       background: radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%);
       pointer-events: none; z-index: 0;
     }
     body::after {
-      content: ''; position: fixed; bottom: -20%; right: -10%;
+      content: '';
+      position: fixed; bottom: -20%; right: -10%;
       width: 500px; height: 500px;
       background: radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 70%);
       pointer-events: none; z-index: 0;
@@ -49,114 +52,195 @@
       background: var(--bg);
     }
     .login-card {
-      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-      backdrop-filter: blur(20px); border-radius: 24px;
-      padding: 48px 40px; width: 100%; max-width: 460px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 48px 40px;
+      width: 100%; max-width: 400px;
       text-align: center;
       box-shadow: 0 25px 60px rgba(0,0,0,0.5), var(--glow);
     }
     .login-icon {
       width: 72px; height: 72px;
       background: linear-gradient(135deg, var(--accent), #d97706);
-      border-radius: 20px; display: flex; align-items: center; justify-content: center;
-      font-size: 32px; margin: 0 auto 24px;
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 24px;
       box-shadow: 0 8px 24px rgba(245,158,11,0.3);
     }
     .login-card h2 { font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
-    .login-card > p { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+    .login-card > p { color: var(--muted); font-size: 0.9rem; margin-bottom: 32px; }
 
-    /* Mode Tabs */
-    .conn-tabs {
-      display: flex; background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border); border-radius: 12px; padding: 4px;
-      margin-bottom: 24px;
-    }
-    .conn-tab {
-      flex: 1; padding: 10px 8px; border: none; background: transparent;
-      color: var(--muted); border-radius: 9px; cursor: pointer;
-      font-size: 0.82rem; font-weight: 600; transition: all .2s;
-    }
-    .conn-tab.active {
-      color: #000; box-shadow: 0 4px 12px rgba(245,158,11,0.3);
-    }
-    .conn-tab.active.local  { background: linear-gradient(135deg, var(--accent2), #059669); }
-    .conn-tab.active.remote { background: linear-gradient(135deg, var(--purple), #7c3aed); }
-
-    .conn-panel { display: none; }
-    .conn-panel.active { display: block; }
-
-    .input-group { position: relative; margin-bottom: 14px; }
+    .input-group { position: relative; margin-bottom: 16px; text-align: left; }
     .input-group label {
-      display: block; text-align: left; font-size: 0.8rem; font-weight: 500;
-      color: var(--muted); margin-bottom: 6px;
+      display: block;
+      font-size: 0.8rem; font-weight: 500;
+      color: var(--muted); margin-bottom: 8px;
       text-transform: uppercase; letter-spacing: 0.05em;
     }
+    .input-wrap { position: relative; }
     .input-group input {
-      width: 100%; padding: 12px 16px;
-      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      width: 100%; padding: 14px 44px 14px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
       border-radius: 12px; color: var(--text);
-      font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; outline: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem; outline: none;
       transition: border-color .2s, box-shadow .2s;
+      letter-spacing: 0.15em;
     }
     .input-group input:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
     }
-    .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .login-hint {
-      font-size: 0.75rem; color: var(--muted); margin-bottom: 16px;
-      line-height: 1.5;
+    .toggle-vis {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 16px; line-height: 1; padding: 0;
+      transition: color .2s;
     }
-    .login-hint a { color: var(--accent3); text-decoration: none; }
-    .login-hint a:hover { text-decoration: underline; }
+    .toggle-vis:hover { color: var(--text); }
+    .input-hint {
+      font-size: 0.75rem; color: var(--muted); margin-top: 6px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .token-saved-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25);
+      color: #10b981; border-radius: 6px; padding: 3px 8px;
+      font-size: 0.72rem; margin-top: 6px;
+    }
+    .login-token-status {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 16px; border-radius: 12px; margin-bottom: 16px;
+      font-size: 0.82rem;
+    }
+    .login-token-status.has-token {
+      background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);
+      color: #10b981;
+    }
+    .login-token-status.no-token {
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent);
+    }
+
     .btn-login {
       width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--accent), #d97706);
       border: none; border-radius: 12px;
       color: #000; font-size: 1rem; font-weight: 700;
-      cursor: pointer; transition: transform .15s, box-shadow .15s; margin-top: 6px;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      margin-top: 8px;
     }
-    #btn-login-local  { background: linear-gradient(135deg, var(--accent2), #059669); }
-    #btn-login-remote { background: linear-gradient(135deg, var(--purple), #7c3aed); color: #fff; }
-    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(245,158,11,0.35); }
     .btn-login:active { transform: translateY(0); }
-    .login-error { color: var(--danger); font-size: 0.82rem; margin-top: 12px; display: none; }
+    .login-error { color: var(--danger); font-size: 0.85rem; margin-top: 12px; display: none; }
 
     /* ══ DASHBOARD ══ */
     #dashboard { display: none; position: relative; z-index: 1; }
+
     header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 32px; border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      position: sticky; top: 0; z-index: 50;
       background: rgba(9,14,26,0.85);
     }
     .header-left { display: flex; align-items: center; gap: 14px; }
     .header-logo {
       width: 42px; height: 42px;
       background: linear-gradient(135deg, var(--accent), #d97706);
-      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
       font-size: 20px;
     }
     .header-title h1  { font-size: 1.1rem; font-weight: 700; }
     .header-title span { font-size: 0.75rem; color: var(--muted); }
-    .header-right { display: flex; align-items: center; gap: 16px; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
     .status-dot { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background .3s; }
     .dot.online  { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); animation: pulse 2s infinite; }
     .dot.offline { background: var(--danger); }
-    .dot.connecting { background: var(--accent); animation: blink .8s infinite; }
-    @keyframes pulse  { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
-    @keyframes blink  { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
-    .conn-badge {
-      padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
-    }
-    .conn-badge.local  { background: rgba(16,185,129,0.15); color: var(--accent2); border: 1px solid rgba(16,185,129,0.25); }
-    .conn-badge.remote { background: rgba(139,92,246,0.15); color: var(--purple); border: 1px solid rgba(139,92,246,0.25); }
-    .btn-logout {
-      padding: 8px 16px; border: 1px solid var(--border);
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    .btn-header {
+      padding: 8px 14px; border: 1px solid var(--border);
       background: transparent; color: var(--muted);
-      border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: all .2s;
+      border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+      transition: all .2s; display: flex; align-items: center; gap: 6px;
     }
-    .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+    .btn-header:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-header.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ══ TOKEN MODAL ══ */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box {
+      background: #0f1829;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 32px;
+      width: 100%; max-width: 480px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+      transform: translateY(16px);
+      transition: transform .25s;
+    }
+    .modal-overlay.open .modal-box { transform: translateY(0); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .modal-header h3 { font-size: 1.15rem; font-weight: 700; }
+    .btn-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 22px; cursor: pointer; line-height: 1; padding: 0;
+      transition: color .2s;
+    }
+    .btn-close:hover { color: var(--text); }
+    .modal-desc { color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; line-height: 1.6; }
+    .current-token-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 14px;
+      margin-bottom: 20px;
+    }
+    .current-token-box .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .current-token-box .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem; color: var(--accent);
+      word-break: break-all;
+    }
+    .test-result {
+      padding: 10px 14px; border-radius: 10px;
+      font-size: 0.82rem; margin-bottom: 16px; display: none;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .test-result.ok  { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #10b981; }
+    .test-result.err { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.3);  color: #ef4444;  }
+    .test-result.loading { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; }
+    .modal-btn-row { display: flex; gap: 10px; margin-top: 4px; }
+    .btn-modal {
+      flex: 1; padding: 12px; border-radius: 10px;
+      font-size: 0.88rem; font-weight: 600; cursor: pointer;
+      transition: all .2s; border: 1px solid var(--border);
+    }
+    .btn-modal.secondary {
+      background: rgba(255,255,255,0.04); color: var(--text);
+    }
+    .btn-modal.secondary:hover { background: rgba(255,255,255,0.08); }
+    .btn-modal.primary {
+      background: linear-gradient(135deg, var(--accent), #d97706);
+      color: #000; border-color: transparent;
+    }
+    .btn-modal.primary:hover { box-shadow: 0 6px 20px rgba(245,158,11,0.3); }
+    .btn-modal:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* ══ Layout ══ */
     .main-content { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
@@ -173,8 +257,10 @@
     /* ══ Card ══ */
     .card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; padding: 24px; backdrop-filter: blur(10px);
-      transition: border-color .2s, transform .2s; position: relative; overflow: hidden;
+      border-radius: 20px; padding: 24px;
+      backdrop-filter: blur(10px);
+      transition: border-color .2s, transform .2s;
+      position: relative; overflow: hidden;
     }
     .card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-2px); }
     .card::before {
@@ -194,6 +280,15 @@
     /* Battery bar */
     .battery-bar-wrap { height:10px; background:rgba(255,255,255,0.08); border-radius:5px; overflow:hidden; margin-top:12px; }
     .battery-bar-fill { height:100%; border-radius:5px; background:linear-gradient(90deg,var(--accent2),#34d399); transition:width 1s ease; }
+
+    /* Night mode badge */
+    .night-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+      color: #a78bfa; border-radius: 8px; padding: 4px 10px;
+      font-size: 0.75rem; font-weight: 600;
+      animation: pulse 2s infinite;
+    }
 
     /* LDR */
     .ldr-grid-card { grid-column: span 2; }
@@ -233,16 +328,6 @@
     .sys-row .sys-key { color:var(--muted); }
     .sys-row .sys-val { font-family:'JetBrains Mono',monospace; font-weight:500; }
 
-    /* Toast */
-    #toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      background: rgba(239,68,68,0.9); color: #fff;
-      padding: 12px 24px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;
-      display: none; z-index: 200; backdrop-filter: blur(10px);
-      animation: toastIn .3s ease;
-    }
-    @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(10px);} to{opacity:1;transform:translateX(-50%) translateY(0);} }
-
     /* Responsive */
     @media (max-width:1024px) { .grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(2,1fr);} }
     @media (max-width:640px)  {
@@ -250,7 +335,8 @@
       .grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}
       .ldr-grid-card,.servo-card,.control-card{grid-column:span 1;}
       .card-value{font-size:1.6rem;} .servo-wrap{flex-direction:column;}
-      .input-row{grid-template-columns:1fr;}
+      .header-right { gap: 6px; }
+      .btn-header span { display: none; }
     }
   </style>
 </head>
@@ -262,17 +348,27 @@
     <div class="login-icon">☀️</div>
     <h2>Solar Tracker</h2>
     <p>Masukkan PIN untuk mengakses dashboard monitoring PLTS</p>
+
+    <!-- Status Token -->
+    <div id="login-token-status" class="login-token-status no-token">
+      <span id="login-token-icon">⚠️</span>
+      <span id="login-token-text">Belum ada token — atur setelah masuk</span>
+    </div>
+
+    <!-- PIN Input -->
     <div class="input-group">
       <label>PIN Akses</label>
-      <input type="password" id="inp-pin" placeholder="••••" maxlength="8" autocomplete="off" autofocus />
+      <div class="input-wrap">
+        <input type="password" id="inp-pin" placeholder="••••"
+               maxlength="8" autocomplete="off" />
+        <button class="toggle-vis" onclick="toggleVis('inp-pin', this)" title="Tampilkan/sembunyikan">👁</button>
+      </div>
     </div>
-    <button class="btn-login" id="btn-login" onclick="doLogin()">Masuk ke Dashboard →</button>
+
+    <button class="btn-login" id="btn-do-login" onclick="doLogin()">Masuk ke Dashboard →</button>
     <p class="login-error" id="login-err">❌ PIN salah. Coba lagi.</p>
   </div>
 </div>
-
-<!-- ═══ TOAST ═══ -->
-<div id="toast">🔌 Koneksi terputus — mencoba reconnect...</div>
 
 <!-- ═══ DASHBOARD ═══ -->
 <div id="dashboard">
@@ -281,16 +377,18 @@
       <div class="header-logo">☀️</div>
       <div class="header-title">
         <h1>Solar Tracker Dashboard</h1>
-        <span id="header-sub">PLTS 2-Axis — Self Hosted</span>
+        <span>PLTS 2-Axis Monitoring System</span>
       </div>
     </div>
     <div class="header-right">
-      <span class="conn-badge" id="conn-badge">–</span>
       <div class="status-dot">
         <div class="dot" id="conn-dot"></div>
         <span id="conn-text">Menghubungkan...</span>
       </div>
-      <button class="btn-logout" onclick="doLogout()">Keluar</button>
+      <button class="btn-header" id="btn-change-token" onclick="openTokenModal()" title="Ganti Blynk Token">
+        🔑 <span>Ganti Token</span>
+      </button>
+      <button class="btn-header danger" onclick="doLogout()">Keluar</button>
     </div>
   </header>
 
@@ -351,17 +449,34 @@
     </div>
 
     <!-- LDR & Servo -->
-    <p class="section-title">🌡️ Sensor LDR &amp; Posisi Servo</p>
+    <p class="section-title">🌡️ Sensor LDR & Posisi Servo</p>
     <div class="grid-2">
       <div class="card ldr-grid-card">
         <div class="card-label">Sensor Cahaya LDR (0–4095)</div>
         <div class="ldr-visual">
-          <div class="ldr-cell" id="ldr-tl-cell"><div class="ldr-pos">▲ Atas-Kiri</div><div class="ldr-val" id="ldr-tl">–</div><div class="ldr-pct" id="ldr-tl-pct">– %</div></div>
-          <div class="ldr-cell" id="ldr-tr-cell"><div class="ldr-pos">▲ Atas-Kanan</div><div class="ldr-val" id="ldr-tr">–</div><div class="ldr-pct" id="ldr-tr-pct">– %</div></div>
-          <div class="ldr-cell" id="ldr-bl-cell"><div class="ldr-pos">▼ Bawah-Kiri</div><div class="ldr-val" id="ldr-bl">–</div><div class="ldr-pct" id="ldr-bl-pct">– %</div></div>
-          <div class="ldr-cell" id="ldr-br-cell"><div class="ldr-pos">▼ Bawah-Kanan</div><div class="ldr-val" id="ldr-br">–</div><div class="ldr-pct" id="ldr-br-pct">– %</div></div>
+          <div class="ldr-cell" id="ldr-tl-cell">
+            <div class="ldr-pos">▲ Atas-Kiri</div>
+            <div class="ldr-val" id="ldr-tl">–</div>
+            <div class="ldr-pct" id="ldr-tl-pct">– %</div>
+          </div>
+          <div class="ldr-cell" id="ldr-tr-cell">
+            <div class="ldr-pos">▲ Atas-Kanan</div>
+            <div class="ldr-val" id="ldr-tr">–</div>
+            <div class="ldr-pct" id="ldr-tr-pct">– %</div>
+          </div>
+          <div class="ldr-cell" id="ldr-bl-cell">
+            <div class="ldr-pos">▼ Bawah-Kiri</div>
+            <div class="ldr-val" id="ldr-bl">–</div>
+            <div class="ldr-pct" id="ldr-bl-pct">– %</div>
+          </div>
+          <div class="ldr-cell" id="ldr-br-cell">
+            <div class="ldr-pos">▼ Bawah-Kanan</div>
+            <div class="ldr-val" id="ldr-br">–</div>
+            <div class="ldr-pct" id="ldr-br-pct">– %</div>
+          </div>
         </div>
       </div>
+
       <div class="card servo-card">
         <div class="card-label">Posisi Servo</div>
         <div class="servo-wrap">
@@ -404,13 +519,13 @@
           <div class="slider-label"><span>Servo Horizontal</span><span id="lbl-sh">90°</span></div>
           <input type="range" id="sl-h" min="0" max="180" value="90" disabled
             oninput="document.getElementById('lbl-sh').textContent=this.value+'°'"
-            onchange="setServo('H', this.value)" />
+            onchange="setServo(31, this.value)" />
         </div>
         <div class="slider-group">
           <div class="slider-label"><span>Servo Vertikal</span><span id="lbl-sv">90°</span></div>
           <input type="range" id="sl-v" min="0" max="180" value="90" disabled
             oninput="document.getElementById('lbl-sv').textContent=this.value+'°'"
-            onchange="setServo('V', this.value)" />
+            onchange="setServo(32, this.value)" />
         </div>
         <div class="btn-row">
           <button class="btn-action" onclick="resetCenter()">🔁 Reset Tengah</button>
@@ -418,291 +533,442 @@
         </div>
       </div>
 
+      <!-- System Info -->
       <div class="card">
         <div class="card-label" style="margin-bottom:16px">Info Sistem</div>
-        <div class="sys-row"><span class="sys-key">Status Mode</span><span class="sys-val c-yellow" id="sys-mode">–</span></div>
-        <div class="sys-row"><span class="sys-key">Sinyal WiFi</span><span class="sys-val" id="sys-rssi">–</span></div>
-        <div class="sys-row"><span class="sys-key">Uptime</span><span class="sys-val" id="sys-uptime">–</span></div>
-        <div class="sys-row"><span class="sys-key">Status Sensor</span><span class="sys-val" id="sys-sensor">–</span></div>
-        <div class="sys-row"><span class="sys-key">Last Update</span><span class="sys-val" id="sys-update">–</span></div>
-        <div class="sys-row"><span class="sys-key">Koneksi</span><span class="sys-val" id="sys-conn">–</span></div>
+        <div class="sys-row">
+          <span class="sys-key">Status Mode</span>
+          <span class="sys-val c-yellow" id="sys-mode">–</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">Kondisi Cahaya</span>
+          <span class="sys-val" id="sys-daynight">–</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">Sinyal WiFi</span>
+          <span class="sys-val" id="sys-rssi">–</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">Uptime</span>
+          <span class="sys-val" id="sys-uptime">–</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">Last Update</span>
+          <span class="sys-val" id="sys-update">–</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">Token Aktif</span>
+          <span class="sys-val c-green" id="sys-token-preview">–</span>
+        </div>
       </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /dashboard -->
+
+<!-- ═══ MODAL GANTI TOKEN ═══ -->
+<div class="modal-overlay" id="token-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>🔑 Ganti Blynk Auth Token</h3>
+      <button class="btn-close" onclick="closeTokenModal()">×</button>
+    </div>
+    <p class="modal-desc">
+      Masukkan Auth Token baru dari Blynk Dashboard.<br>
+      Token lama akan diganti setelah kamu menekan <strong>Simpan & Reconnect</strong>.
+    </p>
+
+    <div class="current-token-box">
+      <div class="label">Token Aktif Sekarang</div>
+      <div class="value" id="modal-current-token">–</div>
+    </div>
+
+    <div class="input-group" style="margin-bottom:12px;">
+      <label>Token Baru</label>
+      <div class="input-wrap">
+        <input type="password" id="modal-new-token"
+               placeholder="Paste token baru dari Blynk..."
+               autocomplete="off" spellcheck="false" />
+        <button class="toggle-vis" onclick="toggleVis('modal-new-token', this)" title="Tampilkan/sembunyikan">👁</button>
+      </div>
+    </div>
+
+    <div class="test-result" id="modal-test-result"></div>
+
+    <div class="modal-btn-row">
+      <button class="btn-modal secondary" onclick="testNewToken()" id="btn-test-token">🔍 Test Koneksi</button>
+      <button class="btn-modal primary" onclick="saveNewToken()" id="btn-save-token" disabled>✅ Simpan & Reconnect</button>
     </div>
   </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════
-//  KONFIGURASI — sesuaikan di sini
-// ══════════════════════════════════════════════════════
-const CORRECT_PIN    = "1234";   // ← Ganti PIN akses dashboard
+  // ═══ CONFIG ═══
+  const CORRECT_PIN  = "1234";               // Ganti PIN di sini
+  const BLYNK_API    = "https://blynk.cloud/external/api";
+  const REFRESH_MS   = 3000;
+  const LS_TOKEN_KEY = "solar_blynk_token";  // key localStorage
 
-// Default MQTT — sudah diisi, langsung pakai
-const DEFAULT_HOST   = "b641b2f3e5e84aecbd769d2552f5ebe4.s1.eu.hivemq.cloud";
-const DEFAULT_USER   = "Sugab";
-const DEFAULT_PASS   = "Sugab1231..";
-const DEFAULT_DEVICE = "solar01";
+  let authToken      = "";
+  let refreshHdl     = null;
+  let currentMode    = 0;
+  let newTokenTested = false;
 
-// ══════════════════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════════════════
-let connMode    = "local";  // "local" | "remote"
-let espIp       = "";
-let socket      = null;     // WebSocket (local)
-let mqttClient  = null;     // MQTT client (remote)
-let deviceId    = "solar01";
-let reconTmr    = null;
+  // ═══ INIT — cek token tersimpan, update status di login screen ═══
+  (function initSavedToken() {
+    const saved = localStorage.getItem(LS_TOKEN_KEY);
+    const statusEl  = document.getElementById("login-token-status");
+    const iconEl    = document.getElementById("login-token-icon");
+    const textEl    = document.getElementById("login-token-text");
+    if (saved) {
+      authToken = saved;
+      const preview = saved.length > 14
+        ? saved.slice(0, 6) + "••••••" + saved.slice(-4)
+        : saved;
+      statusEl.className = "login-token-status has-token";
+      iconEl.textContent = "✅";
+      textEl.textContent = "Token: " + preview;
+    }
+  })();
 
-// Topics MQTT
-let TOPIC_DATA, TOPIC_MODE, TOPIC_SERVO, TOPIC_RESET;
-
-// ══════════════════════════════════════════════════════
-//  TAB SWITCH
-// ══════════════════════════════════════════════════════
-function switchTab(mode) {
-  connMode = mode;
-  document.getElementById("tab-local").classList.toggle("active",  mode === "local");
-  document.getElementById("tab-remote").classList.toggle("active", mode === "remote");
-  document.getElementById("panel-local").classList.toggle("active",  mode === "local");
-  document.getElementById("panel-remote").classList.toggle("active", mode === "remote");
-  document.getElementById("login-err").style.display = "none";
-}
-
-// ══════════════════════════════════════════════════════
-//  LOGIN — cukup PIN, credentials sudah hardcoded
-// ══════════════════════════════════════════════════════
-window.addEventListener("load", () => {
-  document.getElementById("inp-pin").focus();
-});
-document.addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
-
-function doLogin() {
-  const pin = document.getElementById("inp-pin").value.trim();
-  const err = document.getElementById("login-err");
-  if (pin !== CORRECT_PIN) {
-    err.style.display = "block";
-    document.getElementById("inp-pin").value = "";
-    document.getElementById("inp-pin").focus();
-    return;
+  // ═══ TOGGLE VISIBLE ═══
+  function toggleVis(inputId, btn) {
+    const inp = document.getElementById(inputId);
+    if (inp.type === "password") {
+      inp.type = "text";
+      btn.textContent = "🙈";
+    } else {
+      inp.type = "password";
+      btn.textContent = "👁";
+    }
   }
-  err.style.display = "none";
-  connMode = "remote";
-  deviceId = DEFAULT_DEVICE;
-  TOPIC_DATA  = `solar/${deviceId}/data`;
-  TOPIC_MODE  = `solar/${deviceId}/cmd/mode`;
-  TOPIC_SERVO = `solar/${deviceId}/cmd/servo`;
-  TOPIC_RESET = `solar/${deviceId}/cmd/reset`;
-  showDashboard();
-  connectMqtt(DEFAULT_HOST, DEFAULT_USER, DEFAULT_PASS);
-}
 
-
-
-// ══════════════════════════════════════════════════════
-//  SHOW / HIDE DASHBOARD
-// ══════════════════════════════════════════════════════
-function showDashboard() {
-  document.getElementById("login-screen").style.display = "none";
-  document.getElementById("dashboard").style.display    = "block";
-
-  const badge = document.getElementById("conn-badge");
-  badge.className   = "conn-badge remote";
-  badge.textContent = "🌐 MQTT";
-  document.getElementById("header-sub").textContent  = `PLTS 2-Axis — MQTT via HiveMQ Cloud`;
-  document.getElementById("sys-conn").textContent    = `MQTT HiveMQ (${deviceId})`;
-}
-
-
-function doLogout() {
-  if (socket)     { socket.close(); socket = null; }
-  if (mqttClient) { mqttClient.end(); mqttClient = null; }
-  clearTimeout(reconTmr);
-  document.getElementById("dashboard").style.display    = "none";
-  document.getElementById("login-screen").style.display = "flex";
-  document.getElementById("inp-pin").value = "";
-  document.getElementById("inp-pin").focus();
-  setOnline(false);
-}
-
-// ══════════════════════════════════════════════════════
-//  WEBSOCKET (Local)
-// ══════════════════════════════════════════════════════
-function connectWs() {
-  if (socket) { socket.close(); socket = null; }
-  setDot("connecting");
-  const url = `ws://${espIp}/ws`;
-  socket = new WebSocket(url);
-  socket.onopen    = () => { setOnline(true); hideToast(); clearTimeout(reconTmr); };
-  socket.onmessage = (e) => { try { updateUI(JSON.parse(e.data)); } catch(err) {} };
-  socket.onerror   = ()  => {};
-  socket.onclose   = ()  => { setOnline(false); showToast(); reconTmr = setTimeout(connectWs, 3000); };
-}
-
-// ══════════════════════════════════════════════════════
-//  MQTT (Remote via HiveMQ Cloud)
-// ══════════════════════════════════════════════════════
-function connectMqtt(host, user, pass) {
-  if (mqttClient) { mqttClient.end(); mqttClient = null; }
-  setDot("connecting");
-
-  // HiveMQ Cloud WebSocket TLS: wss://host:8884/mqtt
-  const url = `wss://${host}:8884/mqtt`;
-  const clientId = "web-" + Math.random().toString(16).substr(2, 8);
-
-  mqttClient = mqtt.connect(url, {
-    clientId,
-    username: user,
-    password: pass,
-    clean: true,
-    reconnectPeriod: 3000,
-    connectTimeout: 10000,
-  });
-
-  mqttClient.on("connect", () => {
-    console.log("[MQTT] Connected!");
-    setOnline(true); hideToast();
-    mqttClient.subscribe(TOPIC_DATA, { qos: 0 }, (err) => {
-      if (!err) console.log("[MQTT] Subscribed:", TOPIC_DATA);
-    });
-  });
-
-  mqttClient.on("message", (topic, payload) => {
-    if (topic === TOPIC_DATA) {
-      try { updateUI(JSON.parse(payload.toString())); } catch(e) {}
+  // ═══ LOGIN ═══
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      const modal = document.getElementById("token-modal");
+      if (modal.classList.contains("open")) return;
+      doLogin();
     }
   });
 
-  mqttClient.on("offline",    () => { setOnline(false); showToast(); });
-  mqttClient.on("reconnect",  () => { setDot("connecting"); });
-  mqttClient.on("error",      (e) => { console.error("[MQTT]", e); });
-}
+  function doLogin() {
+    const pin = document.getElementById("inp-pin").value.trim();
+    const err = document.getElementById("login-err");
 
-// ══════════════════════════════════════════════════════
-//  KONTROL
-// ══════════════════════════════════════════════════════
-async function sendCmd(key, value) {
-  if (connMode === "local") {
-    // REST API
-    try {
-      const body = new URLSearchParams();
-      if (key === "mode")  { body.set("val", value);   await fetch(`http://${espIp}/api/mode`,  { method:"POST", body }); }
-      if (key === "servo") { const [ax,val]=value.split(":"); body.set("axis",ax); body.set("val",val); await fetch(`http://${espIp}/api/servo`, { method:"POST", body }); }
-      if (key === "reset") { body.set("target", value); await fetch(`http://${espIp}/api/reset`, { method:"POST", body }); }
-    } catch(e) { console.error("[API]", e); }
-  } else {
-    // MQTT publish
-    if (!mqttClient || !mqttClient.connected) return;
-    if (key === "mode")  mqttClient.publish(TOPIC_MODE,  String(value), {qos:1});
-    if (key === "servo") mqttClient.publish(TOPIC_SERVO, value,         {qos:1});
-    if (key === "reset") mqttClient.publish(TOPIC_RESET, value,         {qos:1});
+    if (pin !== CORRECT_PIN) {
+      err.style.display = "block";
+      document.getElementById("inp-pin").value = "";
+      return;
+    }
+
+    err.style.display = "none";
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("dashboard").style.display    = "block";
+
+    updateTokenPreview();
+
+    // Jika belum ada token → langsung buka modal token
+    if (!authToken) {
+      setTimeout(() => openTokenModal(), 400);
+      return;
+    }
+
+    startRefresh();
   }
-}
 
-function setMode(val) {
-  sendCmd("mode", val);
-  const isAuto = val === 1;
-  document.getElementById("btn-auto").classList.toggle("active",  isAuto);
-  document.getElementById("btn-manual").classList.toggle("active", !isAuto);
-  document.getElementById("sl-h").disabled = isAuto;
-  document.getElementById("sl-v").disabled = isAuto;
-}
+  function doLogout() {
+    clearInterval(refreshHdl);
+    document.getElementById("dashboard").style.display    = "none";
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("inp-pin").value = "";
+    // Refresh status token di login screen
+    const saved = localStorage.getItem(LS_TOKEN_KEY);
+    const statusEl = document.getElementById("login-token-status");
+    const iconEl   = document.getElementById("login-token-icon");
+    const textEl   = document.getElementById("login-token-text");
+    if (saved) {
+      const preview = saved.length > 14
+        ? saved.slice(0, 6) + "••••••" + saved.slice(-4) : saved;
+      statusEl.className = "login-token-status has-token";
+      iconEl.textContent = "✅";
+      textEl.textContent = "Token: " + preview;
+    } else {
+      statusEl.className = "login-token-status no-token";
+      iconEl.textContent = "⚠️";
+      textEl.textContent = "Belum ada token — atur setelah masuk";
+    }
+  }
 
-function setServo(axis, val) { sendCmd("servo", `${axis}:${val}`); }
+  // ═══ FETCH BLYNK API ═══
+  function startRefresh() {
+    fetchAll();
+    refreshHdl = setInterval(fetchAll, REFRESH_MS);
+  }
 
-function resetCenter() {
-  if (!confirm("Reset servo ke posisi tengah (90°)?")) return;
-  sendCmd("reset", "center");
-}
-function resetEnergy() {
-  if (!confirm("Reset energi harian ke 0 Wh?")) return;
-  sendCmd("reset", "energy");
-}
+  async function getPin(pin, token) {
+    const url = `${BLYNK_API}/get?token=${token}&${pin}`;
+    const r   = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status} (${pin})`);
+    const text = await r.text();
+    try {
+      const j = JSON.parse(text);
+      return Array.isArray(j) ? j[0] : j;
+    } catch {
+      return text.trim();
+    }
+  }
 
-// ══════════════════════════════════════════════════════
-//  UPDATE UI
-// ══════════════════════════════════════════════════════
-function fmt(v, dec=2) { const n=parseFloat(v); return isNaN(n)?"–":n.toFixed(dec); }
+  async function fetchAll() {
+    const pins = ["V0","V1","V2","V3","V4","V5","V6",
+                  "V10","V11","V12","V13","V14","V15",
+                  "V20","V21","V22","V24"];
+    try {
+      const vals = await Promise.all(pins.map(p => getPin(p, authToken)));
+      const d = {};
+      pins.forEach((p, i) => d[p] = vals[i]);
+      updateUI(d);
+      setOnline(true);
+    } catch(e) {
+      setOnline(false, e.message);
+      console.error("Fetch error:", e);
+    }
+  }
 
-function updateUI(d) {
-  setH("v-panel-v", fmt(d.panelV)   + u("V"));
-  setH("v-panel-a", fmt(d.panelA,0) + u("mA"));
-  setH("v-panel-w", fmt(d.panelW,3) + u("W"));
-  setH("v-energy",  fmt(d.energy,4) + u("Wh"));
+  // ═══ UPDATE UI ═══
+  function fmt(v, dec=2) {
+    const n = parseFloat(v);
+    return isNaN(n) ? "–" : n.toFixed(dec);
+  }
 
-  setH("v-bat-v",   fmt(d.batV)   + u("V"));
-  setH("v-bat-a",   fmt(d.batA,0) + u("mA"));
-  const pct = parseInt(d.batPct) || 0;
-  setH("v-bat-pct", pct + u("%"));
-  document.getElementById("bat-bar").style.width = pct + "%";
+  function updateUI(d) {
+    // Panel
+    setH("v-panel-v", fmt(d.V0)   + u("V"));
+    setH("v-panel-a", fmt(d.V1,0) + u("mA"));
+    setH("v-panel-w", fmt(d.V2,3) + u("W"));
+    setH("v-energy",  fmt(d.V6,4) + u("Wh"));
 
-  [["ldrTL","tl"],["ldrTR","tr"],["ldrBL","bl"],["ldrBR","br"]].forEach(([key, id]) => {
-    const raw = parseInt(d[key]) || 0;
-    const p   = (raw / 4095 * 100).toFixed(1);
-    document.getElementById("ldr-"+id).textContent        = raw;
-    document.getElementById("ldr-"+id+"-pct").textContent = p + "%";
-    const cell = document.getElementById("ldr-"+id+"-cell");
-    const t = raw / 4095;
-    cell.style.background  = `rgba(${~~(245*t)},${~~(158*t)},11,${0.05+t*0.2})`;
-    cell.style.borderColor = `rgba(${~~(245*t)},${~~(158*t)},11,${0.1+t*0.3})`;
+    // Battery
+    setH("v-bat-v",   fmt(d.V3)   + u("V"));
+    setH("v-bat-a",   fmt(d.V4,0) + u("mA"));
+    const pct = parseFloat(d.V5) || 0;
+    setH("v-bat-pct", pct.toFixed(0) + u("%"));
+    document.getElementById("bat-bar").style.width = pct + "%";
+
+    // LDR
+    [["V12","tl"],["V13","tr"],["V14","bl"],["V15","br"]].forEach(([pin, id]) => {
+      const raw = parseInt(d[pin]) || 0;
+      const p   = (raw / 4095 * 100).toFixed(1);
+      document.getElementById("ldr-"+id).textContent        = raw;
+      document.getElementById("ldr-"+id+"-pct").textContent = p + "%";
+      const cell = document.getElementById("ldr-"+id+"-cell");
+      const t = raw / 4095;
+      cell.style.background  = `rgba(${~~(245*t)},${~~(158*t)},11,${0.05+t*0.2})`;
+      cell.style.borderColor = `rgba(${~~(245*t)},${~~(158*t)},11,${0.1+t*0.3})`;
+    });
+
+    // Servo
+    const h = parseInt(d.V10) || 90;
+    const v = parseInt(d.V11) || 90;
+    document.getElementById("pos-h").textContent = h + "°";
+    document.getElementById("pos-v").textContent = v + "°";
+    setArc("arc-h", h / 180);
+    setArc("arc-v", v / 180);
+    if (!document.getElementById("sl-h").matches(":active")) {
+      document.getElementById("sl-h").value = h;
+      document.getElementById("lbl-sh").textContent = h + "°";
+    }
+    if (!document.getElementById("sl-v").matches(":active")) {
+      document.getElementById("sl-v").value = v;
+      document.getElementById("lbl-sv").textContent = v + "°";
+    }
+
+    // Mode
+    const mode = (d.V20 || "MANUAL").trim();
+    document.getElementById("sys-mode").textContent = mode;
+    const isAuto = mode === "AUTO";
+    document.getElementById("btn-auto").classList.toggle("active",  isAuto);
+    document.getElementById("btn-manual").classList.toggle("active", !isAuto);
+    document.getElementById("sl-h").disabled = isAuto;
+    document.getElementById("sl-v").disabled = isAuto;
+    currentMode = isAuto ? 1 : 0;
+
+    // Day/Night (V24)
+    const daynight = (d.V24 || "SIANG").trim();
+    const dnEl = document.getElementById("sys-daynight");
+    if (daynight === "MALAM") {
+      dnEl.innerHTML = '<span class="night-badge">🌙 MALAM — Servo Parkir</span>';
+    } else {
+      dnEl.innerHTML = '<span style="color:var(--accent)">☀️ SIANG — Tracking Aktif</span>';
+    }
+
+    // System
+    const rssi = parseInt(d.V21) || 0;
+    const rssiEl = document.getElementById("sys-rssi");
+    rssiEl.textContent = rssi + " dBm";
+    rssiEl.style.color = rssi > -60 ? "#10b981" : rssi > -80 ? "#f59e0b" : "#ef4444";
+    document.getElementById("sys-uptime").textContent = fmtUp(parseInt(d.V22) || 0);
+    document.getElementById("sys-update").textContent = new Date().toLocaleTimeString("id-ID");
+  }
+
+  // ═══ KONTROL ═══
+  async function apiUpdate(pin, val) {
+    try {
+      await fetch(`${BLYNK_API}/update?token=${authToken}&${pin}=${val}`);
+    } catch(e) { console.error("Update error:", e); }
+  }
+
+  function setMode(val) {
+    apiUpdate("V30", val);
+    const isAuto = val === 1;
+    document.getElementById("btn-auto").classList.toggle("active",  isAuto);
+    document.getElementById("btn-manual").classList.toggle("active", !isAuto);
+    document.getElementById("sl-h").disabled = isAuto;
+    document.getElementById("sl-v").disabled = isAuto;
+  }
+
+  function setServo(pin, val) { apiUpdate("V" + pin, val); }
+
+  function resetCenter() {
+    if (!confirm("Reset servo ke posisi tengah (90°)?")) return;
+    apiUpdate("V34", 1);
+    setTimeout(() => apiUpdate("V34", 0), 500);
+  }
+
+  function resetEnergy() {
+    if (!confirm("Reset energi harian ke 0 Wh?")) return;
+    apiUpdate("V33", 1);
+    setTimeout(() => apiUpdate("V33", 0), 500);
+  }
+
+  // ═══ TOKEN MODAL ═══
+  function updateTokenPreview() {
+    const t = authToken;
+    // Tampilkan sebagian token: 6 karakter awal + *** + 6 karakter akhir
+    const preview = t.length > 14
+      ? t.slice(0, 6) + "••••••••" + t.slice(-6)
+      : t;
+    document.getElementById("sys-token-preview").textContent = preview;
+  }
+
+  function openTokenModal() {
+    const t = authToken;
+    const preview = t.length > 14
+      ? t.slice(0, 6) + "••••••••" + t.slice(-6)
+      : t;
+    document.getElementById("modal-current-token").textContent = preview;
+    document.getElementById("modal-new-token").value = "";
+    document.getElementById("modal-new-token").type  = "password";
+    document.getElementById("modal-test-result").style.display = "none";
+    document.getElementById("btn-save-token").disabled = true;
+    newTokenTested = false;
+    document.getElementById("token-modal").classList.add("open");
+    setTimeout(() => document.getElementById("modal-new-token").focus(), 300);
+  }
+
+  function closeTokenModal() {
+    document.getElementById("token-modal").classList.remove("open");
+  }
+
+  // Klik di luar modal → tutup
+  document.getElementById("token-modal").addEventListener("click", function(e) {
+    if (e.target === this) closeTokenModal();
   });
 
-  const h = parseInt(d.servoH) || 90, v = parseInt(d.servoV) || 90;
-  document.getElementById("pos-h").textContent = h + "°";
-  document.getElementById("pos-v").textContent = v + "°";
-  setArc("arc-h", h / 180); setArc("arc-v", v / 180);
-  if (!document.getElementById("sl-h").matches(":active")) {
-    document.getElementById("sl-h").value = h;
-    document.getElementById("lbl-sh").textContent = h + "°";
+  async function testNewToken() {
+    const newToken = document.getElementById("modal-new-token").value.trim();
+    const resEl    = document.getElementById("modal-test-result");
+    const btnTest  = document.getElementById("btn-test-token");
+    const btnSave  = document.getElementById("btn-save-token");
+
+    if (!newToken) {
+      showTestResult("error", "❌ Token tidak boleh kosong.");
+      return;
+    }
+
+    btnTest.disabled = true;
+    btnTest.textContent = "⏳ Menguji...";
+    showTestResult("loading", "⏳ Menghubungkan ke Blynk Cloud...");
+
+    try {
+      const val = await getPin("V22", newToken); // V22 = uptime, pasti ada
+      const n = parseFloat(val);
+      if (!isNaN(n) && n >= 0) {
+        showTestResult("ok", "✅ Token valid! Uptime device: " + fmtUp(~~n));
+        btnSave.disabled = false;
+        newTokenTested = true;
+      } else {
+        showTestResult("error", "⚠️ Respons tidak terduga dari Blynk. Cek token.");
+        btnSave.disabled = true;
+        newTokenTested = false;
+      }
+    } catch(e) {
+      let msg = "❌ Gagal terhubung: " + e.message;
+      if (e.message.includes("401") || e.message.includes("400"))
+        msg = "❌ Token tidak valid (HTTP 401). Pastikan token benar.";
+      else if (e.message.includes("Failed") || e.message.includes("fetch"))
+        msg = "❌ Tidak bisa akses blynk.cloud. Cek koneksi internet.";
+      showTestResult("error", msg);
+      btnSave.disabled = true;
+      newTokenTested = false;
+    }
+
+    btnTest.disabled = false;
+    btnTest.textContent = "🔍 Test Koneksi";
   }
-  if (!document.getElementById("sl-v").matches(":active")) {
-    document.getElementById("sl-v").value = v;
-    document.getElementById("lbl-sv").textContent = v + "°";
+
+  function saveNewToken() {
+    if (!newTokenTested) return;
+    const newToken = document.getElementById("modal-new-token").value.trim();
+    authToken = newToken;
+    localStorage.setItem(LS_TOKEN_KEY, newToken);
+
+    // Update status token di login screen
+    const preview = newToken.length > 14
+      ? newToken.slice(0, 6) + "••••••" + newToken.slice(-4) : newToken;
+    const statusEl = document.getElementById("login-token-status");
+    const iconEl   = document.getElementById("login-token-icon");
+    const textEl   = document.getElementById("login-token-text");
+    statusEl.className = "login-token-status has-token";
+    iconEl.textContent = "✅";
+    textEl.textContent = "Token: " + preview;
+
+    closeTokenModal();
+    updateTokenPreview();
+
+    // Restart refresh dengan token baru
+    clearInterval(refreshHdl);
+    startRefresh();
+
+    // Feedback singkat di status bar
+    document.getElementById("conn-text").textContent = "Reconnecting dengan token baru...";
   }
 
-  const mode = (d.mode || "MANUAL").trim();
-  document.getElementById("sys-mode").textContent = mode;
-  const isAuto = mode === "AUTO";
-  document.getElementById("btn-auto").classList.toggle("active",  isAuto);
-  document.getElementById("btn-manual").classList.toggle("active", !isAuto);
-  document.getElementById("sl-h").disabled = isAuto;
-  document.getElementById("sl-v").disabled = isAuto;
+  function showTestResult(type, msg) {
+    const el = document.getElementById("modal-test-result");
+    el.className = "test-result " + type;
+    el.textContent = msg;
+    el.style.display = "block";
+  }
 
-  const rssi = parseInt(d.rssi) || 0;
-  const rssiEl = document.getElementById("sys-rssi");
-  rssiEl.textContent = rssi + " dBm";
-  rssiEl.style.color = rssi > -60 ? "#10b981" : rssi > -80 ? "#f59e0b" : "#ef4444";
-  document.getElementById("sys-uptime").textContent  = fmtUp(parseInt(d.uptime) || 0);
-  document.getElementById("sys-update").textContent  = new Date().toLocaleTimeString("id-ID");
+  // ═══ STATUS ═══
+  function setOnline(ok, errMsg = "") {
+    document.getElementById("conn-dot").className  = "dot " + (ok ? "online" : "offline");
+    document.getElementById("conn-text").textContent = ok
+      ? "Online — Blynk"
+      : "Offline" + (errMsg ? " — " + errMsg : "");
+  }
 
-  const sEl = document.getElementById("sys-sensor");
-  sEl.textContent = (d.panelOk?"Panel✓":"Panel✗") + " " + (d.batOk?"Bat✓":"Bat✗");
-  sEl.style.color = (d.panelOk && d.batOk) ? "#10b981" : "#f59e0b";
-}
-
-// ══════════════════════════════════════════════════════
-//  STATUS DOT
-// ══════════════════════════════════════════════════════
-function setOnline(ok) {
-  setDot(ok ? "online" : "offline");
-  const label = connMode === "local" ? `ESP32 @ ${espIp}` : `MQTT (${deviceId})`;
-  document.getElementById("conn-text").textContent = ok
-    ? `Online — ${label}`
-    : "Offline — Reconnecting...";
-}
-function setDot(state) { document.getElementById("conn-dot").className = "dot " + state; }
-function showToast() { document.getElementById("toast").style.display = "block"; }
-function hideToast() { document.getElementById("toast").style.display = "none"; }
-
-// ══════════════════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════════════════
-function u(s)    { return `<span class="card-unit">${s}</span>`; }
-function setH(id, html) { const e=document.getElementById(id); if(e) e.innerHTML=html; }
-function setArc(id, fr) {
-  const e=document.getElementById(id);
-  if(e) e.style.strokeDashoffset=(283-283*Math.max(0,Math.min(1,fr))).toString();
-}
-function fmtUp(s) { return `${Math.floor(s/3600)}j ${Math.floor((s%3600)/60)}m ${s%60}d`; }
+  // ═══ HELPERS ═══
+  function u(s)     { return `<span class="card-unit">${s}</span>`; }
+  function setH(id, html) { const e=document.getElementById(id); if(e) e.innerHTML=html; }
+  function setArc(id, fr) {
+    const e = document.getElementById(id);
+    if (e) e.style.strokeDashoffset = (283 - 283 * Math.max(0, Math.min(1, fr))).toString();
+  }
+  function fmtUp(s) {
+    return `${Math.floor(s/3600)}j ${Math.floor((s%3600)/60)}m ${s%60}d`;
+  }
 </script>
 </body>
 </html>
