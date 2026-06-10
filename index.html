@@ -540,10 +540,7 @@
           <span class="sys-key">Status Mode</span>
           <span class="sys-val c-yellow" id="sys-mode">–</span>
         </div>
-        <div class="sys-row">
-          <span class="sys-key">Kondisi Cahaya</span>
-          <span class="sys-val" id="sys-daynight">–</span>
-        </div>
+
         <div class="sys-row">
           <span class="sys-key">Sinyal WiFi</span>
           <span class="sys-val" id="sys-rssi">–</span>
@@ -735,15 +732,6 @@
       console.error("Fetch error:", e);
       return;
     }
-
-    // V24 (Day/Night) — opsional, pin baru v5 firmware.
-    // Jika belum terdaftar di Blynk Template akan return 400, diabaikan saja.
-    try {
-      const daynight = await getPin("V24", authToken);
-      updateDayNight(daynight);
-    } catch {
-      // V24 belum ada di template — tampilkan "–" (sudah default)
-    }
   }
 
   // ═══ UPDATE UI ═══
@@ -812,19 +800,6 @@
     rssiEl.style.color = rssi > -60 ? "#10b981" : rssi > -80 ? "#f59e0b" : "#ef4444";
     document.getElementById("sys-uptime").textContent = fmtUp(parseInt(d.V22) || 0);
     document.getElementById("sys-update").textContent = new Date().toLocaleTimeString("id-ID");
-  }
-
-  // Day/Night — dipanggil terpisah, opsional (V24 baru di firmware v5)
-  function updateDayNight(val) {
-    const dnEl = document.getElementById("sys-daynight");
-    if (!dnEl) return;
-    const daynight = (val || "").trim().toUpperCase();
-    if (daynight === "MALAM") {
-      dnEl.innerHTML = '<span class="night-badge">🌙 MALAM — Servo Parkir</span>';
-    } else if (daynight === "SIANG") {
-      dnEl.innerHTML = '<span style="color:var(--accent)">☀️ SIANG — Tracking Aktif</span>';
-    }
-    // Jika val kosong/undefined, biarkan tampilan sebelumnya
   }
 
   // ═══ KONTROL ═══
